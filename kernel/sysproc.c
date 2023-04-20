@@ -105,6 +105,9 @@ uint64 sys_setuid() {
 
 	struct proc *current = myproc();
 
+  if(!(current->pid == 1 || current->uid == 1))
+    return -1;
+
 	argint(0, &(current->uid));
 
 	return 1;

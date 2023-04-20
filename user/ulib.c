@@ -95,6 +95,8 @@ stat(const char *n, struct stat *st)
   return r;
 }
 
+
+
 int
 atoi(const char *s)
 {
@@ -144,4 +146,33 @@ void *
 memcpy(void *dst, const void *src, uint n)
 {
   return memmove(dst, src, n);
+}
+
+char *strrev(char *str) {
+  char *p1 = str;
+  char *p2 = str + strlen(str) - 1;
+  while(p2 > p1) {
+    char tmp = *p1;
+    *p1 = *p2;
+    *p2 = tmp;
+    p1++;
+    p2--;
+  }
+  return str;
+}
+
+void itoa(char *src, int i) {
+  int tmp = i;
+  char *ptr = src;
+  while(tmp > 1) {
+    *ptr = (tmp % 10) + 48;
+    tmp /= 10;
+    ptr++;
+  }
+  if(tmp == 1) {
+    *ptr = 49;
+  }
+  ptr++;
+  *ptr = 0;
+  strrev(src);
 }

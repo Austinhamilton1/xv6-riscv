@@ -3,7 +3,6 @@
 #include "kernel/types.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
-#include "shelluser.h"
 
 // Parsed command representation
 #define EXEC  1
@@ -143,23 +142,11 @@ getcmd(char *buf, int nbuf)
   return 0;
 }
 
-struct user getuser() {
-  struct user user;
-
-	printf("Username: ");
-	gets(user.username, MAXUSER);
-	printf("Password: ");
-	gets(user.password, MAXPASS);
-
-  return user;
-}
-
 int
 main(void)
 {
   static char buf[100];
   int fd;
-  struct user user;
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -168,11 +155,6 @@ main(void)
       break;
     }
   }
-
-	//if the process we are in is the first shell being initiated
-	if(getpid() == 2) {
-		user = getuser();
-	}
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){

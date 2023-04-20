@@ -8,8 +8,59 @@
 #include "kernel/file.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
+#include "shelluser.h"
 
 char *argv[] = { "sh", 0 };
+
+struct user *user;
+
+void loguser(struct user *user, int method) {
+	int fd;
+
+  if(method == 0) {
+    if((fd = open("users", O_CREATE | O_WRONLY)) < 0) {
+      fprintf(2, "Couldn't create user file.\n");
+      exit(1);
+    }
+
+    char *userstr = serialize(user);
+    fprintf(fd, "%s\n", userstr);
+    free(userstr);
+
+    close(fd);
+  }
+}
+
+void cutnl(char *str) {
+  while(*str != '\n')
+    str++;
+  *str = 0;
+}
+
+void getuser(struct user *user) {
+	int fd;
+
+	fd = open("users", O_RDONLY);
+	
+	if(fd < 0) {
+		printf("No users. Setup root user.\n");
+		printf("Username: ");
+		gets(user->username, MAXUSER);
+		printf("Password: ");
+		gets(user->password, MAXPASS);
+		user->id = 1234;
+    cutnl(user->username);
+    cutnl(user->password);
+		loguser(user, 0);
+	}
+  else {
+    printf("Username: ");
+    gets(user->username, MAXUSER);
+    printf("Password: ");
+    gets(user->password, MAXPASS);
+  }
+
+}
 
 int
 main(void)
@@ -22,6 +73,9 @@ main(void)
   }
   dup(0);  // stdout
   dup(0);  // stderr
+
+  user = (struct user *)malloc(sizeof(struct user));
+	getuser(user);
 
   for(;;){
     printf("init: starting sh\n");
