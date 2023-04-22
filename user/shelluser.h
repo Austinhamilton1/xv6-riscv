@@ -15,7 +15,7 @@ struct user {
 //maximum length of a single user string in the users file (+3 = 2 semicolons and null)
 #define MAXUSERSTR  MAXIDSTR + MAXUSER + MAXPASS + 3
 
-struct users {
+struct userlist {
     struct user *admin;
 };
 
@@ -73,19 +73,37 @@ struct user *deserialize_user(char *str) {
     return user;
 }
 
-void adduser(struct users *userlist, struct user *user) {
-    if(userlist->admin == 0) {
-        userlist->admin = user;
+void adduser(struct userlist *users, struct user *user) {
+    if(users == 0) {
+        printf("Error: invalid userlist\n");
+        exit(1);
+    }
+    if(users->admin == 0) {
+        users->admin = user;
         return;
     }
-    struct user *current = userlist->admin;
+    struct user *current = users->admin;
     while(current->next != 0) {
         current = current->next;
     }
     current->next = user;
 }
 
-char *serialize_users(struct users *userlist) {
+int getuser(struct userlist *users, char *username, char *password) {
+    if(users == 0)
+        return -1;
+    struct user *current = users->admin;
+    while(current != 0) {
+        if(strcmp(current->username, username) == 0 
+        && strcmp(current->password, password) == 0) {
+            return current->id;
+        }
+        current = current->next;
+    }
+    return -1;
+}
+
+char *serialize_users(struct userlist *userlist) {
     char *str = (char *)malloc(MAXUSERSSTR);
     memset(str, 0, MAXUSERSTR);
     char *ptr = str;
@@ -112,8 +130,8 @@ int get_userstr(char *dst, char *str) {
     return 0;
 }
 
-struct users *deserialize_users(char *str) {
-    struct users *users = (struct users *)malloc(sizeof(struct users));
+struct userlist *deserialize_users(char *str) {
+    struct userlist *users = (struct userlist *)malloc(sizeof(struct userlist));
     char userbuf[MAXUSERSTR];
     memset(userbuf, 0, sizeof(userbuf));
     while(get_userstr(userbuf, str) > 0) {
@@ -121,11 +139,10 @@ struct users *deserialize_users(char *str) {
         adduser(users, deserialize_user(userbuf));
         memset(userbuf, 0, sizeof(userbuf));
     }
-    printf("userlist->admin->id: %d\n", users->admin->id);
     return users;
 }
 
-void freelist(struct users *userlist) {
+void freelist(struct userlist *userlist) {
     struct user *current = userlist->admin;
     struct user *next;
     while(current->next != 0) {
@@ -138,7 +155,7 @@ void freelist(struct users *userlist) {
 
 void test1() {
     char *usersstr = "1:root:toor\n2:user:password\n3:jack:12345\n";
-    struct users *userlist = deserialize_users(usersstr);
+    struct userlist *userlist = deserialize_users(usersstr);
     printf("Deserialization completed\n");
     printf("User List: %s\n", serialize_users(userlist));
     freelist(userlist);

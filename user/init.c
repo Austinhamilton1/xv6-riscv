@@ -12,10 +12,9 @@
 
 char *argv[] = { "sh", 0 };
 
-struct user *user;
-struct users *userlist;
+struct userlist *userlist;
 
-void loguser(struct user *user, int method) {
+void logusers(struct userlist *users, int method) {
 	int fd;
 
   if(method == 0) {
@@ -24,8 +23,8 @@ void loguser(struct user *user, int method) {
       exit(1);
     }
 
-    char *userstr = serialize_user(user);
-    fprintf(fd, "%s\n", userstr);
+    char *userstr = serialize_users(users);
+    fprintf(fd, "%s", userstr);
     free(userstr);
 
     close(fd);
@@ -38,9 +37,12 @@ void cutnl(char *str) {
   *str = 0;
 }
 
-void getuser(struct user *user) {
+void login() {
 	int fd;
+  struct user *user = (struct user *)malloc(sizeof(struct user));
 	char userbuf[MAXUSERSSTR];
+  memset(user->username, 0, MAXUSER);
+  memset(user->password, 0, MAXPASS);
 
 	fd = open("users", O_RDONLY);
 	
@@ -53,21 +55,30 @@ void getuser(struct user *user) {
 		user->id = 1;
     cutnl(user->username);
     cutnl(user->password);
-		loguser(user, 0);
+    userlist = (struct userlist *)malloc(sizeof(struct userlist));
+    adduser(userlist, user);
+		logusers(userlist, 0);
 	}
   else {
+    int uid;
     printf("Username: ");
     gets(user->username, MAXUSER-1);
     printf("Password: ");
     gets(user->password, MAXPASS-1);
+    cutnl(user->username);
+    cutnl(user->password);
 		if(read(fd, userbuf, sizeof(userbuf)) < 0) {
 			printf("Couldn't get users!\n");
 			exit(1);
 		}
-		userslist = deserialize_users(userbuf);
-		
+		userlist = deserialize_users(userbuf);
+		if((uid = getuser(userlist, user->username, user->password)) < 0) {
+      printf("Invalid username or password.\n");
+      login(user);
+    }
+    user->id = uid;
   }
-
+  //setuid(user->uid);
 }
 
 int
@@ -81,12 +92,8 @@ main(void)
   }
   dup(0);  // stdout
   dup(0);  // stderr
-
-  user = (struct user *)malloc(sizeof(struct user));
-	memset(user->username, 0, MAXUSER);
-	memset(user->password, 0, MAXPASS);
-	getuser(user);
-  free(user);
+  
+  login();
 
   for(;;){
     printf("init: starting sh\n");
