@@ -13,6 +13,7 @@
 char *argv[] = { "sh", 0 };
 
 struct user *user;
+struct users *userlist;
 
 void loguser(struct user *user, int method) {
 	int fd;
@@ -23,7 +24,7 @@ void loguser(struct user *user, int method) {
       exit(1);
     }
 
-    char *userstr = serialize(user);
+    char *userstr = serialize_user(user);
     fprintf(fd, "%s\n", userstr);
     free(userstr);
 
@@ -39,25 +40,32 @@ void cutnl(char *str) {
 
 void getuser(struct user *user) {
 	int fd;
+	char userbuf[MAXUSERSSTR];
 
 	fd = open("users", O_RDONLY);
 	
 	if(fd < 0) {
 		printf("No users. Setup root user.\n");
 		printf("Username: ");
-		gets(user->username, MAXUSER);
+		gets(user->username, MAXUSER-1);
 		printf("Password: ");
-		gets(user->password, MAXPASS);
-		user->id = 1234;
+		gets(user->password, MAXPASS-1);
+		user->id = 1;
     cutnl(user->username);
     cutnl(user->password);
 		loguser(user, 0);
 	}
   else {
     printf("Username: ");
-    gets(user->username, MAXUSER);
+    gets(user->username, MAXUSER-1);
     printf("Password: ");
-    gets(user->password, MAXPASS);
+    gets(user->password, MAXPASS-1);
+		if(read(fd, userbuf, sizeof(userbuf)) < 0) {
+			printf("Couldn't get users!\n");
+			exit(1);
+		}
+		userslist = deserialize_users(userbuf);
+		
   }
 
 }
@@ -75,7 +83,10 @@ main(void)
   dup(0);  // stderr
 
   user = (struct user *)malloc(sizeof(struct user));
+	memset(user->username, 0, MAXUSER);
+	memset(user->password, 0, MAXPASS);
 	getuser(user);
+  free(user);
 
   for(;;){
     printf("init: starting sh\n");
