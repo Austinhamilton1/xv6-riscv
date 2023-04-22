@@ -78,7 +78,7 @@ void login() {
     }
     user->id = uid;
   }
-  //setuid(user->uid);
+  setuid(user->id);
 }
 
 int

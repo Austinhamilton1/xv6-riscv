@@ -24,7 +24,7 @@ int sleep(int);
 int uptime(void);
 int trace(int);
 int getuid(void);
-int setuid(void);
+int setuid(int);
 int setID(void);
 
 // ulib.c

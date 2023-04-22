@@ -5,7 +5,7 @@
 
 int main(int argc, char*argv[]) {
 	
-	setuid();
+	//setuid();
 	printf("testing set id");
 	
 	return 0;
