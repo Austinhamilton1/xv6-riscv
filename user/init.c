@@ -14,31 +14,27 @@ char *argv[] = { "sh", 0 };
 
 struct userlist *userlist;
 
-
-
-void cutnl(char *str) {
-  while(*str != '\n')
-    str++;
-  *str = 0;
+void getcreds(char *username, char *password) {
+  memset(username, 0, MAXUSER);
+  memset(password, 0, MAXPASS);
+  printf("Username: ");
+  gets(username, MAXUSER-1);
+  printf("Password: ");
+  gets(password, MAXPASS-1);
+  cutnl(username);
+  cutnl(password);
 }
 
 void login() {
 	int fd;
   struct user *user = inituser(0, 0, 0);
 	char userbuf[MAXUSERSSTR];
-  memset(user->username, 0, MAXUSER);
-  memset(user->password, 0, MAXPASS);
 
-	fd = open("users", O_RDONLY);
+	fd = open("/users", O_RDONLY);
 	
 	if(fd < 0) {
 		printf("No users. Setup root user.\n");
-		printf("Username: ");
-		gets(user->username, MAXUSER-1);
-		printf("Password: ");
-		gets(user->password, MAXPASS-1);
-    cutnl(user->username);
-    cutnl(user->password);
+		getcreds(user->username, user->password);
     userlist = inituserlist();
     adduser(userlist, user);
 		logusers(userlist);
@@ -46,20 +42,21 @@ void login() {
 	}
   else {
     int uid;
-    printf("Username: ");
-    gets(user->username, MAXUSER-1);
-    printf("Password: ");
-    gets(user->password, MAXPASS-1);
-    cutnl(user->username);
-    cutnl(user->password);
+    getcreds(user->username, user->password);
 		if(read(fd, userbuf, sizeof(userbuf)) < 0) {
 			printf("Couldn't get users!\n");
 			exit(1);
 		}
+    close(fd);
 		userlist = deserialize_users(userbuf);
-		if((uid = getuser(userlist, user->username, user->password)) < 0) {
-      printf("Invalid username or password.\n");
-      login(user);
+    int i;
+		for(i = 0; i < 3 && (uid = getuser(userlist, 0, user->username, user->password)) < 0; i++) {
+      printf("Invalid username or password\n");
+      getcreds(user->username, user->password);
+    }
+    if(uid < 0) {
+      printf("Too many failed login attempts\n");
+      exit(1);
     }
     user->id = uid;
   }

@@ -134,7 +134,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_trace\
 	$U/_getuid\
-	$U/_setuser\
+	$U/_sudo\
 	$U/_adduser\
 	$U/_rmuser\
 

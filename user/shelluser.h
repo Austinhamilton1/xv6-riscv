@@ -22,6 +22,12 @@ struct userlist {
 //maximum amount of data in the users file (+MAXUSERS = \n for each user, +1 = null)
 #define MAXUSERSSTR 1024
 
+void cutnl(char *str) {
+  while(*str != '\n')
+    str++;
+  *str = 0;
+}
+
 struct user *inituser(int id, char *username, char *password) {
     struct user *user = (struct user *)malloc(sizeof(struct user));
     memset(user->username, 0, sizeof(user->username));
@@ -151,8 +157,6 @@ void adduser(struct userlist *users, struct user *user) {
     current->next = user;
 }
 
-char *serialize_users(struct userlist *);
-
 void rmuser(struct userlist *users, char *username) {
     if(users == 0) {
         printf("Error: invalid userlist\n");
@@ -174,12 +178,12 @@ void rmuser(struct userlist *users, char *username) {
     prev->next = current->next;
 }
 
-int getuser(struct userlist *users, char *username, char *password) {
+int getuser(struct userlist *users, int id, char *username, char *password) {
     if(users == 0)
         return -1; 
     struct user *current = users->admin;
     while(current != 0) {
-        if(strcmp(current->username, username) == 0 
+        if((current->id == id || strcmp(current->username, username) == 0) 
         && strcmp(current->password, password) == 0) {
             return current->id;
         }

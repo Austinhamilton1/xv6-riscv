@@ -107,8 +107,6 @@ uint64 sys_setuid(void) {
 	struct proc* current = myproc();
 
 	argint(0, &(current->uid));
-  if(current->parent != 0)
-    argint(0, &(current->parent->uid));
 
 	return 1;
 }
