@@ -108,7 +108,6 @@ extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_getuid(void);
 extern uint64 sys_setuid(void);
-extern uint64 sys_setID(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -137,7 +136,6 @@ static uint64 (*syscalls[])(void) = {
 [SYS_trace]   sys_trace,
 [SYS_getuid]  sys_getuid,
 [SYS_setuid]  sys_setuid,
-[SYS_setID]   sys_setID,
 };
 
 static char *sys_names[] = {
@@ -165,7 +163,6 @@ static char *sys_names[] = {
 [SYS_trace]   "trace",
 [SYS_getuid]  "getuid",
 [SYS_setuid]  "setuid",
-[SYS_setID]   "setID",
 };
 
 void

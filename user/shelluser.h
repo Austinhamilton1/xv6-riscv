@@ -91,7 +91,7 @@ void adduser(struct userlist *users, struct user *user) {
 
 int getuser(struct userlist *users, char *username, char *password) {
     if(users == 0)
-        return -1;
+        return -1; 
     struct user *current = users->admin;
     while(current != 0) {
         if(strcmp(current->username, username) == 0 
