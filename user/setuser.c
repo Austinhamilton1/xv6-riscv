@@ -30,7 +30,7 @@ int main(int argc, char*argv[]) {
 	}
 
 	setuid(uid);
-	printf("User id: %d\n", getuid());
+	freeuserlist(users);
 	
 	return 0;
 }

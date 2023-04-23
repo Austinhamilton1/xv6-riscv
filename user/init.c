@@ -14,22 +14,7 @@ char *argv[] = { "sh", 0 };
 
 struct userlist *userlist;
 
-void logusers(struct userlist *users, int method) {
-	int fd;
 
-  if(method == 0) {
-    if((fd = open("users", O_CREATE | O_WRONLY)) < 0) {
-      fprintf(2, "Couldn't create user file.\n");
-      exit(1);
-    }
-
-    char *userstr = serialize_users(users);
-    fprintf(fd, "%s", userstr);
-    free(userstr);
-
-    close(fd);
-  }
-}
 
 void cutnl(char *str) {
   while(*str != '\n')
@@ -39,7 +24,7 @@ void cutnl(char *str) {
 
 void login() {
 	int fd;
-  struct user *user = (struct user *)malloc(sizeof(struct user));
+  struct user *user = inituser(0, 0, 0);
 	char userbuf[MAXUSERSSTR];
   memset(user->username, 0, MAXUSER);
   memset(user->password, 0, MAXPASS);
@@ -52,12 +37,12 @@ void login() {
 		gets(user->username, MAXUSER-1);
 		printf("Password: ");
 		gets(user->password, MAXPASS-1);
-		user->id = 1;
     cutnl(user->username);
     cutnl(user->password);
-    userlist = (struct userlist *)malloc(sizeof(struct userlist));
+    userlist = inituserlist();
     adduser(userlist, user);
-		logusers(userlist, 0);
+		logusers(userlist);
+    freeuserlist(userlist);
 	}
   else {
     int uid;
@@ -79,6 +64,7 @@ void login() {
     user->id = uid;
   }
   setuid(user->id);
+  freeuser(user);
 }
 
 int

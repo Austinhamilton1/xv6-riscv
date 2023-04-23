@@ -135,7 +135,8 @@ UPROGS=\
 	$U/_trace\
 	$U/_getuid\
 	$U/_setuser\
-	$U/_setID\
+	$U/_adduser\
+	$U/_rmuser\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
