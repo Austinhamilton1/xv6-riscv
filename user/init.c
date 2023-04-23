@@ -59,6 +59,7 @@ void login() {
       exit(1);
     }
     user->id = uid;
+    freeuserlist(userlist);
   }
   setuid(user->id);
   freeuser(user);

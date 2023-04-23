@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
 
 	int fd, uid;
-	if((fd = open("users", O_RDONLY)) < 0) {
+	if((fd = open("/users", O_RDONLY)) < 0) {
 		printf("No users file\n");
 		exit(1);
 	}

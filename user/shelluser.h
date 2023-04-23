@@ -12,14 +12,14 @@ struct user {
     struct user *next;
 };
 
-//maximum length of a single user string in the users file (+3 = 2 semicolons and null)
+//maximum length of a single user string in the users file 
 #define MAXUSERSTR  64
 
 struct userlist {
     struct user *admin;
 };
 
-//maximum amount of data in the users file (+MAXUSERS = \n for each user, +1 = null)
+//maximum amount of data in the users file
 #define MAXUSERSSTR 1024
 
 void cutnl(char *str) {
@@ -30,6 +30,7 @@ void cutnl(char *str) {
 
 struct user *inituser(int id, char *username, char *password) {
     struct user *user = (struct user *)malloc(sizeof(struct user));
+    user->id = id;
     memset(user->username, 0, sizeof(user->username));
     memset(user->password, 0, sizeof(user->password));
     memcpy(user->username, username, sizeof(user->username)-1);
@@ -234,7 +235,7 @@ struct userlist *deserialize_users(char *str) {
 
 void logusers(struct userlist *users) {
     int fd;
-    if((fd = open("users", O_CREATE | O_WRONLY)) < 0) {
+    if((fd = open("/users", O_CREATE | O_WRONLY)) < 0) {
         printf("Couldn't create user file.\n");
         exit(1);
     }

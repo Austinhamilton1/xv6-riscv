@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     int fd;
     char userbuf[MAXUSERSSTR];
     memset(userbuf, 0, sizeof(userbuf));
-    if((fd = open("users", O_RDONLY)) < 0) {
+    if((fd = open("/users", O_RDONLY)) < 0) {
         printf("Error: could not open users file\n");
         exit(1);
     }
