@@ -137,6 +137,7 @@ UPROGS=\
 	$U/_sudo\
 	$U/_adduser\
 	$U/_rmuser\
+	$U/_setuser\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
