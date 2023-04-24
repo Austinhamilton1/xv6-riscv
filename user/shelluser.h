@@ -1,3 +1,4 @@
+#include "kernel/types.h"
 #include "user/user.h"
 
 #define MAXUSER     20
@@ -8,7 +9,7 @@
 struct user {
     unsigned int id;
     char username[MAXUSER];
-    char password[MAXPASS];
+    uint64 passhash;
     struct user *next;
 };
 
@@ -31,9 +32,8 @@ void cutnl(char *str) {
 struct user *inituser(int id, char *username, char *password) {
     struct user *user = (struct user *)malloc(sizeof(struct user));
     memset(user->username, 0, sizeof(user->username));
-    memset(user->password, 0, sizeof(user->password));
     memcpy(user->username, username, sizeof(user->username)-1);
-    memcpy(user->password, password, sizeof(user->password)-1);
+    user->passhash = hash(password);
     return user;
 }
 
@@ -47,7 +47,7 @@ char *serialize_user(struct user *user) {
     memset(str, 0, MAXUSERSTR);
     char *ptr = str;
 
-    char *idstr = (char *)malloc(10);
+    char idstr[MAXIDSTR];
     itoa(idstr, user->id);
 
     memcpy(ptr, idstr, sizeof(idstr));
@@ -62,8 +62,11 @@ char *serialize_user(struct user *user) {
     *ptr = ':';
     ptr++;
 
-    memcpy(ptr, user->password, sizeof(user->password));
-    ptr += strlen(user->password);
+    char passhash[MAXPASS];
+    memset(passhash, 0, sizeof(passhash));
+    itoa(passhash, user->passhash);
+
+    memcpy(ptr, passhash, MAXPASS);
 
     return str;
 }
@@ -73,8 +76,7 @@ struct user *deserialize_user(char *str) {
     
     while(*str != ':') {
         user->id *= 10;
-        user->id += (unsigned int)(*str - 48);
-        str++;
+        user->id += (unsigned int)(*(str++) - 48);
     }
     str++;
 
@@ -85,10 +87,10 @@ struct user *deserialize_user(char *str) {
     *(++name) = 0;
     str++;
 
-    char *pass = user->password;
-    while(*str != 0 && *str != '\n')
-        *pass++ = *str++;
-    *(++pass) = 0;
+    while(*str != 0 && *str != '\n') {
+        user->passhash *= 10;
+        user->passhash += (unsigned int)(*(str++) - 48);
+    }
 
     return user;
 }
@@ -178,13 +180,13 @@ void rmuser(struct userlist *users, char *username) {
     prev->next = current->next;
 }
 
-int getuser(struct userlist *users, int id, char *username, char *password) {
+int getuser(struct userlist *users, int id, char *username, uint64 passhash) {
     if(users == 0)
         return -1; 
     struct user *current = users->admin;
     while(current != 0) {
         if((current->id == id || strcmp(current->username, username) == 0) 
-        && strcmp(current->password, password) == 0) {
+        && current->passhash == passhash) {
             return current->id;
         }
         current = current->next;
@@ -234,7 +236,7 @@ struct userlist *deserialize_users(char *str) {
 
 void logusers(struct userlist *users) {
     int fd;
-    if((fd = open("users", O_CREATE | O_WRONLY)) < 0) {
+    if((fd = open("/users", O_CREATE | O_WRONLY)) < 0) {
         printf("Couldn't create user file.\n");
         exit(1);
     }
@@ -246,21 +248,10 @@ void logusers(struct userlist *users) {
     close(fd);
 }
 
-void test1() {
-    char *usersstr = "1:root:toor\n2:user:password\n3:jack:12345\n";
-    struct userlist *userlist = deserialize_users(usersstr);
-    printf("Deserialization completed\n");
-    printf("User List: %s\n", serialize_users(userlist));
-    freeuserlist(userlist);
-    printf("Freed userlist\n");
-}
-
-void test2() {
-    char *usersstr = "1:a:a\n2:b:b\n3:c:c\n4:d:d\n5:e:e\n6:f:f\n7:g:g\n8:h:h\n9:i:i\n10:j:j\n11:k:k";
-    struct userlist *userlist = deserialize_users(usersstr);
-    printf("Deserialization completed\n");
-    printf("Length: %d\n", length(userlist));
-    printf("User List: %s\n", serialize_users(userlist));
-    freeuserlist(userlist);
-    printf("Freed userlist\n");
+void test() {
+    printf("%d\n", hash("toor"));
+    char test[MAXPASS];
+    itoa(test, hash("toor"));
+    printf("%s\n", test);
+    printf("%d\n", hash("toor") == hash("toor"));
 }

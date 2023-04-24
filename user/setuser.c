@@ -24,7 +24,7 @@ int main(int argc, char*argv[]) {
 
         struct userlist *users = deserialize_users(userstr);
 
-        if((uid = getuser(users, 0, argv[1], argv[2])) < 0) {
+        if((uid = getuser(users, 0, argv[1], hash(argv[2]))) < 0) {
                 printf("Invalid user\n");
                 exit(1);
         }

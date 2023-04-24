@@ -161,8 +161,8 @@ char *strrev(char *str) {
   return str;
 }
 
-void itoa(char *src, int i) {
-  int tmp = i;
+void itoa(char *src, uint64 i) {
+  uint64 tmp = i;
   char *ptr = src;
   while(tmp > 1) {
     *ptr = (tmp % 10) + 48;
@@ -175,4 +175,21 @@ void itoa(char *src, int i) {
   ptr++;
   *ptr = 0;
   strrev(src);
+}
+
+uint64 pow(long a, long b) {
+  uint64 result = 1;
+  for(int i = 0; i < b; i++)
+    result *= b;
+  return result;
+}
+
+uint64 hash(char *str) {
+  uint64 value = 0;
+  int len = strlen(str);
+  int p = 97, m = pow(10, 9) + 9;
+  for(int i = 0; i < len; i++) {
+    value += str[i] * pow(p, i);
+  }
+  return value % m;
 }
