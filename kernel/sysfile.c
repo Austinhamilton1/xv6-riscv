@@ -18,14 +18,11 @@
 
 static int checkperms(struct inode *ip, int access) {
   if(ip->owner == 0)
-    return 0;
+    return 1;
   struct proc *p = myproc();
-  int shiftval = 0;
   if(ip->owner == p->uid)
-    shiftval = 3;
-  if(!((ip->permissions >> shiftval) & access))
-    return -1;
-  return 0;
+    return OWNER_PERM(ip) & access;
+  return USER_PERM(ip) & access;
 }
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -73,7 +70,7 @@ sys_dup(void)
     return -1;
   if((fd=fdalloc(f)) < 0)
     return -1;
-  if(checkperms(f->ip, READ) < 0) {
+  if(checkperms(f->ip, READ)) {
     myproc()->ofile[fd] = 0;
     fileclose(f);
     return -1;
@@ -95,7 +92,7 @@ sys_read(void)
   if(argfd(0, 0, &f) < 0)
     return -1;
     
-  if(checkperms(f->ip, READ) < 0) {
+  if(checkperms(f->ip, READ)) {
     fileclose(f);
     return -1;
   }
@@ -115,7 +112,7 @@ sys_write(void)
   if(argfd(0, 0, &f) < 0)
     return -1;
 
-  if(checkperms(f->ip, WRITE) < 0) {
+  if(checkperms(f->ip, WRITE)) {
     fileclose(f);
     return -1;
   }
@@ -175,7 +172,7 @@ sys_link(void)
   iupdate(ip);
   iunlock(ip);
 
-  if((dp = nameiparent(new, name)) == 0 || checkperms(dp, dp->permissions >> 3) < 0)
+  if((dp = nameiparent(new, name)) == 0 || checkperms(dp, OWNER_PERM(dp)))
     goto bad;
   ilock(dp);
   if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
@@ -241,7 +238,7 @@ sys_unlink(void)
     goto bad;
   ilock(ip);
 
-  if(checkperms(dp, dp->permissions >> 3) < 0)
+  if(checkperms(dp, OWNER_PERM(dp)))
     goto bad;
 
   if(ip->nlink < 1)
@@ -343,6 +340,7 @@ uint64
 sys_open(void)
 {
   char path[MAXPATH];
+  char name[DIRSIZ];
   int fd, omode;
   struct file *f;
   struct inode *ip;
@@ -360,7 +358,7 @@ sys_open(void)
       end_op();
       return -1;
     }
-    if(checkperms(nameiparent(ip), WRITE) < 0) {
+    if(checkperms(nameiparent(path, name), WRITE)) {
       iunlockput(ip);
       end_op();
       return -1;
@@ -416,7 +414,7 @@ sys_open(void)
 uint64
 sys_mkdir(void)
 {
-  char path[MAXPATH];
+  char path[MAXPATH], name[DIRSIZ];
   struct inode *ip;
 
   begin_op();
@@ -424,7 +422,7 @@ sys_mkdir(void)
     end_op();
     return -1;
   }
-  if(checkperms(nameiparent(path), WRITE) < 0) {
+  if(checkperms(nameiparent(path, name), WRITE)) {
     iunlockput(ip);
     end_op();
     return -1;
@@ -472,7 +470,7 @@ sys_chdir(void)
     end_op();
     return -1;
   }
-  if(checkperms(ip, READ) < 0) {
+  if(checkperms(ip, READ)) {
     iunlockput(ip);
     end_op();
     return -1;
@@ -487,7 +485,7 @@ sys_chdir(void)
 uint64
 sys_exec(void)
 {
-  char path[MAXPATH], *argv[MAXARG];
+  char path[MAXPATH], name[DIRSIZ], *argv[MAXARG];
   int i;
   uint64 uargv, uarg;
 
@@ -495,7 +493,7 @@ sys_exec(void)
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
-  if(checkperms(nameiparent(path), EXEC) < 0)
+  if(checkperms(nameiparent(path, name), EXEC))
     return -1;
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
@@ -548,7 +546,7 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
-  if(checkperms(rf->ip, READ) < 0 || checkperms(wf->ip, WRITE) < 0) {
+  if(checkperms(rf->ip, READ) || checkperms(wf->ip, WRITE)) {
     p->ofile[fd0] = 0;
     p->ofile[fd1] = 0;
     fileclose(rf);
