@@ -89,6 +89,7 @@ sys_read(void)
   int n;
   uint64 p;
 
+  
   argaddr(1, &p);
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
@@ -305,6 +306,7 @@ create(char *path, short type, short major, short minor)
   ip->major = major;
   ip->minor = minor;
   ip->nlink = 1;
+
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.

@@ -27,6 +27,10 @@ struct inode {
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
+  
+  // add owner and permissions field
+  uint owner;
+  uint permissions;
 };
 
 // map major device number to device functions.
@@ -38,3 +42,14 @@ struct devsw {
 extern struct devsw devsw[];
 
 #define CONSOLE 1
+
+// adding bitmask file permissions
+#define READ	4
+#define WRITE	2
+#define EXEC	1
+
+// #define OWNER_READABLE(ip)    ((ip->permissions >> 2) & READ_OWNER)
+#define OWNER_READABLE(ip)    ((ip->permissions >> 3) & READ)
+#define OWNER_WRITABLE(ip)    ((ip->permissions >> 3) & WRITE)
+#define OWNER_EXECUTABLE(ip)  ((ip->permissions >> 3)  & EXEC)
+
