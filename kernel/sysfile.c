@@ -17,15 +17,20 @@
 #include "fcntl.h"
 
 static int checkperms(struct inode *ip, int access) {
-  if(ip->owner == 0 || ip->permissions == 0)
+  ilock(ip);
+  if(ip->owner == 0 || ip->permissions == 0) {
+    iunlock(ip);
     return 1;
+  }
   struct proc *p = myproc();
   int a;
   if(ip->owner == p->uid) {
     a = OWNER_PERM(ip) & access;
+    iunlock(ip);
     return a;
   }
   a = OTHER_PERM(ip) & access;
+  iunlock(ip);
   return a;
 }
 
@@ -291,7 +296,8 @@ create(char *path, short type, short major, short minor)
     ilock(ip);
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
       ip->owner = myproc()->uid;
-      ip->permissions = ((READ | WRITE) << 3) | READ;
+      ip->permissions = ((READ | WRITE) << 3);
+      iupdate(ip);
       return ip;
     }
     iunlockput(ip);
@@ -308,7 +314,7 @@ create(char *path, short type, short major, short minor)
   ip->minor = minor;
   ip->nlink = 1;
   ip->owner = myproc()->uid;
-  ip->permissions = ((READ | WRITE) << 3) | READ;
+  ip->permissions = ((READ | WRITE) << 3);
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
