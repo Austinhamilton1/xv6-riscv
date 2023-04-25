@@ -71,8 +71,6 @@ sys_read(void)
   struct file *f;
   int n;
   uint64 p;
-  uint64 uid = myproc()->uid;
-  struct inode *ip;
 
   
   argaddr(1, &p);
@@ -81,9 +79,6 @@ sys_read(void)
     return -1;
 
   
-  // check file permissions
-  if (uid != ip->owner && !OTHERS_READABLE(ip))
-    return -1;
 
   return fileread(f, p, n);
 }
@@ -94,17 +89,12 @@ sys_write(void)
   struct file *f;
   int n;
   uint64 p;
-  uint64 uid = myproc()->uid; 
-  struct inode *ip;
 
   argaddr(1, &p);
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
 
-  // check file permissions
-  if (uid != ip->owner && !OTHERS_WRITABLE(ip))
-    return -1;
 
   return filewrite(f, p, n);
 }
@@ -287,12 +277,6 @@ create(char *path, short type, short major, short minor)
   ip->minor = minor;
   ip->nlink = 1;
 
-  // set the file owner to the current process's user ID
-  //ip->owner = myproc()->uid;
-
-  // set the file permissions
-  //ip->permissions = (READ_OWNER | WRITE_OWNER | READ_OTHER); // owner has r/w, others have r only
-
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -459,17 +443,11 @@ sys_exec(void)
   char path[MAXPATH], *argv[MAXARG];
   int i;
   uint64 uargv, uarg;
-  uint64 uid = myproc()->uid;
-  struct inode *ip;
 
   argaddr(1, &uargv);
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
-
-  // check file permissions
-  if (uid != ip->owner && !OTHERS_EXECUTABLE(ip))
-    return -1;
 
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){

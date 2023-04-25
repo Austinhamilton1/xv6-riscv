@@ -44,17 +44,12 @@ extern struct devsw devsw[];
 #define CONSOLE 1
 
 // adding bitmask file permissions
-#define READ_OWNER	4
-#define WRITE_OWNER	2
-#define EXEC_OWNER	1
-#define READ_OTHER	4
-#define WRITE_OTHER	2
-#define EXEC_OTHER	1
+#define READ	4
+#define WRITE	2
+#define EXEC	1
 
-#define OWNER_READABLE(ip)    ((ip->permissions >> 2) & READ_OWNER)
-#define OWNER_WRITABLE(ip)    ((ip->permissions >> 1) & WRITE_OWNER)
-#define OWNER_EXECUTABLE(ip)  (ip->permissions & EXEC_OWNER)
-#define OTHERS_READABLE(ip)   ((ip->permissions >> 2) & READ_OTHER)
-#define OTHERS_WRITABLE(ip)   ((ip->permissions >> 1) & WRITE_OTHER)
-#define OTHERS_EXECUTABLE(ip) (ip->permissions & EXEC_OTHER)
+// #define OWNER_READABLE(ip)    ((ip->permissions >> 2) & READ_OWNER)
+#define OWNER_READABLE(ip)    ((ip->permissions >> 3) & READ)
+#define OWNER_WRITABLE(ip)    ((ip->permissions >> 3) & WRITE)
+#define OWNER_EXECUTABLE(ip)  ((ip->permissions >> 3)  & EXEC)
 
