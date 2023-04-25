@@ -170,17 +170,11 @@ sys_link(void)
     return -1;
   }
 
-  if(checkperms(ip, ip->permissions >> 3) < 0) {
-    iunlockput(ip);
-    end_op();
-    return -1;
-  }
-
   ip->nlink++;
   iupdate(ip);
   iunlock(ip);
 
-  if((dp = nameiparent(new, name)) == 0)
+  if((dp = nameiparent(new, name)) == 0 || checkperms(dp, dp->permissions >> 3) < 0)
     goto bad;
   ilock(dp);
   if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
@@ -246,7 +240,7 @@ sys_unlink(void)
     goto bad;
   ilock(ip);
 
-  if(checkperms(ip, ip->permissions >> 3) < 0)
+  if(checkperms(dp, dp->permissions >> 3) < 0)
     goto bad;
 
   if(ip->nlink < 1)
@@ -294,6 +288,7 @@ create(char *path, short type, short major, short minor)
     iunlockput(dp);
     ilock(ip);
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
+      ip->owner = myproc()->uid;
       ip->permissions = ((READ | WRITE) << 3) | READ;
       return ip;
     }
@@ -329,6 +324,7 @@ create(char *path, short type, short major, short minor)
 
   iunlockput(dp);
 
+  ip->owner = myproc()->uid;
   ip->permissions = ((READ | WRITE) << 3) | READ;
   return ip;
 
@@ -362,6 +358,11 @@ sys_open(void)
       end_op();
       return -1;
     }
+    if(checkperms(nameiparent(ip), WRITE) < 0) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
   } else {
     if((ip = namei(path)) == 0){
       end_op();
@@ -369,11 +370,6 @@ sys_open(void)
     }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
-      iunlockput(ip);
-      end_op();
-      return -1;
-    }
-    if(checkperms(ip, WRITE) < 0) {
       iunlockput(ip);
       end_op();
       return -1;
@@ -426,7 +422,7 @@ sys_mkdir(void)
     end_op();
     return -1;
   }
-  if(checkperms(namei(path), WRITE) < 0) {
+  if(checkperms(nameiparent(path), WRITE) < 0) {
     iunlockput(ip);
     end_op();
     return -1;
@@ -497,7 +493,7 @@ sys_exec(void)
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
-  if(checkperms(namei(path), EXEC) < 0)
+  if(checkperms(nameiparent(path), EXEC) < 0)
     return -1;
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
