@@ -16,6 +16,18 @@
 #include "file.h"
 #include "fcntl.h"
 
+static int checkperms(struct inode *ip, int access) {
+  if(ip->owner == 0)
+    return 0;
+  struct proc *p = myproc();
+  int shiftval = 0;
+  if(ip->owner == p->uid)
+    shiftval = 3;
+  if(!((ip->permissions >> shiftval) & access))
+    return -1;
+  return 0;
+}
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -61,6 +73,11 @@ sys_dup(void)
     return -1;
   if((fd=fdalloc(f)) < 0)
     return -1;
+  if(checkperms(f->ip, READ) < 0) {
+    myproc()->ofile[fd] = 0;
+    fileclose(f);
+    return -1;
+  }
   filedup(f);
   return fd;
 }
@@ -76,6 +93,12 @@ sys_read(void)
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
+    
+  if(checkperms(f->ip, READ) < 0) {
+    fileclose(f);
+    return -1;
+  }
+
   return fileread(f, p, n);
 }
 
@@ -85,11 +108,16 @@ sys_write(void)
   struct file *f;
   int n;
   uint64 p;
-  
+
   argaddr(1, &p);
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
+
+  if(checkperms(f->ip, WRITE) < 0) {
+    fileclose(f);
+    return -1;
+  }
 
   return filewrite(f, p, n);
 }
@@ -137,6 +165,12 @@ sys_link(void)
 
   ilock(ip);
   if(ip->type == T_DIR){
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  if(checkperms(ip, ip->permissions >> 3) < 0) {
     iunlockput(ip);
     end_op();
     return -1;
@@ -212,6 +246,9 @@ sys_unlink(void)
     goto bad;
   ilock(ip);
 
+  if(checkperms(ip, ip->permissions >> 3) < 0)
+    goto bad;
+
   if(ip->nlink < 1)
     panic("unlink: nlink < 1");
   if(ip->type == T_DIR && !isdirempty(ip)){
@@ -256,8 +293,10 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
+    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
+      ip->permissions = ((READ | WRITE) << 3) | READ;
       return ip;
+    }
     iunlockput(ip);
     return 0;
   }
@@ -290,6 +329,7 @@ create(char *path, short type, short major, short minor)
 
   iunlockput(dp);
 
+  ip->permissions = ((READ | WRITE) << 3) | READ;
   return ip;
 
  fail:
@@ -329,6 +369,11 @@ sys_open(void)
     }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+    if(checkperms(ip, WRITE) < 0) {
       iunlockput(ip);
       end_op();
       return -1;
@@ -381,6 +426,11 @@ sys_mkdir(void)
     end_op();
     return -1;
   }
+  if(checkperms(namei(path), WRITE) < 0) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
   iunlockput(ip);
   end_op();
   return 0;
@@ -424,6 +474,11 @@ sys_chdir(void)
     end_op();
     return -1;
   }
+  if(checkperms(ip, READ) < 0) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
   iunlock(ip);
   iput(p->cwd);
   end_op();
@@ -442,6 +497,8 @@ sys_exec(void)
   if(argstr(0, path, MAXPATH) < 0) {
     return -1;
   }
+  if(checkperms(namei(path), EXEC) < 0)
+    return -1;
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
     if(i >= NELEM(argv)){
@@ -489,6 +546,13 @@ sys_pipe(void)
   if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
     if(fd0 >= 0)
       p->ofile[fd0] = 0;
+    fileclose(rf);
+    fileclose(wf);
+    return -1;
+  }
+  if(checkperms(rf->ip, READ) < 0 || checkperms(wf->ip, WRITE) < 0) {
+    p->ofile[fd0] = 0;
+    p->ofile[fd1] = 0;
     fileclose(rf);
     fileclose(wf);
     return -1;
