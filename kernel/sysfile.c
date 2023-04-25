@@ -22,7 +22,7 @@ static int checkperms(struct inode *ip, int access) {
   struct proc *p = myproc();
   if(ip->owner == p->uid)
     return OWNER_PERM(ip) & access;
-  return USER_PERM(ip) & access;
+  return OTHER_PERM(ip) & access;
 }
 
 // Fetch the nth word-sized system call argument as a file descriptor
