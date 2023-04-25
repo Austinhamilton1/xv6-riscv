@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
 
 	int fd, uid;
-	if((fd = open("users", O_RDONLY)) < 0) {
+	if((fd = open("/users", O_RDONLY)) < 0) {
 		printf("No users file\n");
 		exit(1);
 	}
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 	gets(password, sizeof(password)-1);
 	cutnl(password);
 
-	if((uid = getuser(users, 1, 0, password)) != 1) {
+	if((uid = getuser(users, 1, 0, hash(password))) != 1) {
 		printf("Invalid admin password\n");
 		exit(1);
 	}

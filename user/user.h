@@ -43,5 +43,6 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
-void itoa(char *, int);
+void itoa(char *, uint64);
 char *strrev(char *str);
+uint64 hash(char *);
