@@ -26,11 +26,12 @@ struct inode {
   short minor;
   short nlink;
   uint size;
-  uint addrs[NDIRECT+1];
-  
   // add owner and permissions field
   uint owner;
   uint permissions;
+  uint addrs[NDIRECT+1];
+  
+  
 };
 
 // map major device number to device functions.

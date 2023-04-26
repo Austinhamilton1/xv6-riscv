@@ -17,20 +17,25 @@
 #include "fcntl.h"
 
 static int checkperms(struct inode *ip, int access) {
+  struct proc *p = myproc();
   ilock(ip);
-  if(ip->owner == 0 || ip->permissions == 0) {
+  if(ip->owner == 0 || ip->permissions == 0 || p->uid == 1) {
     iunlock(ip);
     return 1;
   }
-  struct proc *p = myproc();
   int a;
   if(ip->owner == p->uid) {
-    a = OWNER_PERM(ip) & access;
-    iunlock(ip);
+    if((a = OWNER_PERM(ip)) & access) {
+      iunlock(ip);
+      return a;
+    }
+    iunlockput(ip);
     return a;
   }
-  a = OTHER_PERM(ip) & access;
-  iunlock(ip);
+  if((a = OTHER_PERM(ip)) & access)
+    iunlock(ip);
+  else
+    iunlockput(ip);
   return a;
 }
 
@@ -289,8 +294,8 @@ create(char *path, short type, short major, short minor)
   if((dp = nameiparent(path, name)) == 0)
     return 0;
 
-  if((ip == namei(path)) && !checkperms(ip, WRITE))
-    return 0;
+  // if((ip = namei(path)) && !checkperms(ip, WRITE))
+  //   return 0;
 
   ilock(dp);
 
@@ -299,8 +304,7 @@ create(char *path, short type, short major, short minor)
     ilock(ip);
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
       ip->owner = myproc()->uid;
-      ip->permissions = ((READ | WRITE) << 3);
-      iupdate(ip);
+      ip->permissions = ((READ | WRITE) << 3) | READ;
       return ip;
     }
     iunlockput(ip);
@@ -317,7 +321,7 @@ create(char *path, short type, short major, short minor)
   ip->minor = minor;
   ip->nlink = 1;
   ip->owner = myproc()->uid;
-  ip->permissions = ((READ | WRITE) << 3);
+  ip->permissions = ((READ | WRITE) << 3) | READ;
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -364,7 +368,6 @@ sys_open(void)
     return -1;
 
   begin_op();
-
   if(omode & O_CREATE){
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
@@ -418,9 +421,9 @@ sys_open(void)
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
     iunlock(ip);
+    end_op();
+    begin_op();
     if(!checkperms(ip, WRITE)) {
-      iput(ip);
-      end_op();
       return -1;
     }
     ilock(ip);
