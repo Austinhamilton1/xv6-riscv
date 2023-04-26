@@ -289,6 +289,9 @@ create(char *path, short type, short major, short minor)
   if((dp = nameiparent(path, name)) == 0)
     return 0;
 
+  if((ip == namei(path)) && !checkperms(ip, WRITE))
+    return 0;
+
   ilock(dp);
 
   if((ip = dirlookup(dp, name, 0)) != 0){
@@ -414,6 +417,13 @@ sys_open(void)
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
+    iunlock(ip);
+    if(!checkperms(ip, WRITE)) {
+      iput(ip);
+      end_op();
+      return -1;
+    }
+    ilock(ip);
     itrunc(ip);
   }
 
