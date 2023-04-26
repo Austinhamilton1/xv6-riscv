@@ -234,7 +234,6 @@ iupdate(struct inode *ip)
   dip->major = ip->major;
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
-  dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
   log_write(bp);
   brelse(bp);
@@ -462,6 +461,8 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
+  st->owner = ip->owner;
+  st->permissions = ip->permissions;
 }
 
 // Read data from inode.

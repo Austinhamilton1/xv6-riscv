@@ -39,6 +39,7 @@ void login() {
 		getcreds(user);
     userlist = inituserlist();
     adduser(userlist, user);
+    setuid(1);
 		logusers(userlist);
     freeuserlist(userlist);
 	}
@@ -60,10 +61,9 @@ void login() {
       printf("Too many failed login attempts\n");
       exit(1);
     }
-    user->id = uid;
+    setuid(uid);
     freeuserlist(userlist);
   }
-  setuid(user->id);
   freeuser(user);
 }
 
