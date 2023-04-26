@@ -271,6 +271,22 @@ bad:
   return -1;
 }
 
+//method for doing a chmod command (changing permissions for a file)
+//things we will need (i think) in order to complete this method
+//1. the current permissions on the file we want to change (also need the file)
+//2. a bitmask to clear all of the permissions (do a bitwise and with thr bitmask being the inverse of the permissions integer)
+//3. the group being effected by the chmod (if multiple groups, do one change at a time)
+//4. the permissions to give to said group
+//------------------------------------------------------------------
+
+
+
+uint64
+sys_chmod()
+{
+
+}
+
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
