@@ -16,16 +16,31 @@
 #include "file.h"
 #include "fcntl.h"
 
+
 static int checkperms(struct inode *ip, int access) {
-  if(ip->owner == 0 || ip->permissions == 0)
+  ilock(ip);
+  if(ip->owner != 0){
+    printf("ip->owner:  %d\n", ip->owner);
+    printf("ip->permissions: %d\n", ip->permissions);
+  }
+  if((ip->owner == 0)  || ip->permissions == 0) {
+    iunlock(ip);
     return 1;
+  }
   struct proc *p = myproc();
   int a;
-  if(ip->owner == p->uid) {
+  //if (access == 4 && ip->owner == p->uid){
+    //return OWNER_READABLE(ip);
+  //} else {
+//	  return OTHER_READABLE(ip);
+  //}
+  if(ip->owner == p->uid && p->uid == 1) {
     a = OWNER_PERM(ip) & access;
+    iunlock(ip);
     return a;
   }
   a = OTHER_PERM(ip) & access;
+  iunlock(ip);
   return a;
 }
 
@@ -95,7 +110,7 @@ sys_read(void)
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
-    
+  
   if(!checkperms(f->ip, READ)) {
     fileclose(f);
     return -1;
@@ -117,7 +132,8 @@ sys_write(void)
     return -1;
 
   if(!checkperms(f->ip, WRITE)) {
-    fileclose(f);
+    printf("PERMISSIONS REQUIRED FOR THIS COMMAND!\n");
+    //fileclose(f);
     return -1;
   }
 
@@ -206,6 +222,19 @@ isdirempty(struct inode *dp)
   int off;
   struct dirent de;
 
+  char dot[] = ".";
+  char dotdot[] = "..";
+
+  // Check for "." and ".." entries
+  if(readi(dp, 0, (uint64)&de, 0, sizeof(de)) != sizeof(de))
+    panic("isdirempty: readi");
+  if(memcmp(de.name, dot, sizeof(dot)) != 0)
+    return 0;
+  if(readi(dp, 0, (uint64)&de, sizeof(de), sizeof(de)) != sizeof(de))
+    panic("isdirempty: readi");
+  if(memcmp(de.name, dotdot, sizeof(dotdot)) != 0)
+    return 0;
+
   for(off=2*sizeof(de); off<dp->size; off+=sizeof(de)){
     if(readi(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
       panic("isdirempty: readi");
@@ -289,11 +318,14 @@ create(char *path, short type, short major, short minor)
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
-    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
+    //if(dp->owner != ip->owner)
+       //return 0;
+    if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE) && dp->owner == ip->owner) {
       ip->owner = myproc()->uid;
-      ip->permissions = ((READ | WRITE) << 3) | READ;
+      ip->permissions = ((READ | WRITE) << 4) | READ;
       return ip;
     }
+    printf("No permissions for this operation!\n");
     iunlockput(ip);
     return 0;
   }
@@ -308,10 +340,12 @@ create(char *path, short type, short major, short minor)
   ip->minor = minor;
   ip->nlink = 1;
   ip->owner = myproc()->uid;
-  ip->permissions = ((READ | WRITE) << 3) | READ;
+  ip->permissions = ((READ | WRITE) << 4) | READ;
   iupdate(ip);
 
-  if(type == T_DIR){  // Create . and .. entries.
+  if(type == T_DIR && ip->owner == myproc()->uid){  // Create . and .. entries.
+    ip->owner = myproc()->uid;
+    ip->permissions = ((READ | WRITE) << 4) | READ;	  
     // No ip->nlink++ for ".": avoid cyclic ref count.
     if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
       goto fail;
@@ -320,7 +354,9 @@ create(char *path, short type, short major, short minor)
   if(dirlink(dp, name, ip->inum) < 0)
     goto fail;
 
-  if(type == T_DIR){
+  if(type == T_DIR && ip->owner == myproc()->uid){
+    ip->owner = myproc()->uid;
+    ip->permissions = ((READ | WRITE) << 4) | READ;	  
     // now that success is guaranteed:
     dp->nlink++;  // for ".."
     iupdate(dp);

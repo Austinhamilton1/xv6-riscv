@@ -48,8 +48,15 @@ extern struct devsw devsw[];
 #define WRITE	2
 #define EXEC	1
 
-#define OWNER_READABLE(ip)    ((ip->permissions >> 3) & READ)
-#define OWNER_WRITABLE(ip)    ((ip->permissions >> 3) & WRITE)
-#define OWNER_EXECUTABLE(ip)  ((ip->permissions >> 3)  & EXEC)
-#define OWNER_PERM(ip)        ((ip->permissions >> 3) & 0b111)
-#define OTHER_PERM(ip)        (ip->permissions & 0b111) 
+#define READ_OTHER	4
+#define WRITE_OTHER	2
+#define EXEC_OTHER	1
+
+#define OWNER_READABLE(ip)    ((ip->permissions >> 2) & READ)
+#define OWNER_WRITABLE(ip)    ((ip->permissions >> 1) & WRITE)
+#define OWNER_EXECUTABLE(ip)  (ip->permissions & EXEC)
+#define OTHER_READABLE(ip)    ((ip->permissions >> 2) & READ_OTHER)
+#define OTHER_WRITABLE(ip)    ((ip->permissions >> 1) & WRITE_OTHER)
+#define OTHER_EXECUTABLE(ip)  (ip->permissions & EXEC_OTHER)
+#define OWNER_PERM(ip)        (ip->permissions >> 4)
+#define OTHER_PERM(ip)        (ip->permissions) 

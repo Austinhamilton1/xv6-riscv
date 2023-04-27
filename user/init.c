@@ -27,8 +27,10 @@ void getcreds(struct user *user) {
   user->passhash = hash(passhash);
 }
 
+
 void login() {
 	int fd;
+	
   struct user *user = inituser(0, 0, 0);
 	char userbuf[MAXUSERSSTR];
 
@@ -64,7 +66,7 @@ void login() {
     setuid(uid);
     freeuserlist(userlist);
   }
-  freeuser(user);
+  //freeuser(user);
 }
 
 int
