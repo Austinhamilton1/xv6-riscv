@@ -16,22 +16,26 @@
 #include "file.h"
 #include "fcntl.h"
 
-static int checkperms(struct inode *ip, int access) {
-  ilock(ip);
-  if(ip->owner == 0 || ip->permissions == 0) {
-    iunlock(ip);
+static int checkperms(char *path, int access) {
+  char name[DIRSIZ];
+  struct inode *dp;
+  int uid = myproc()->uid;
+  if((dp = nameiparent(path, name)) == 0)
+    return 0;
+  ilock(dp);
+  if(dp->owner == 0 || uid == 1) {
+    iunlock(dp);
     return 1;
   }
-  struct proc *p = myproc();
-  int a;
-  if(ip->owner == p->uid) {
-    a = OWNER_PERM(ip) & access;
-    iunlock(ip);
-    return a;
+  uint perm;
+  if(dp->owner == uid) {
+    perm = OWNER_PERM(dp) & access;
+    iunlock(dp);
+    return perm;
   }
-  a = OTHER_PERM(ip) & access;
-  iunlock(ip);
-  return a;
+  perm = OTHER_PERM(dp) & access;
+  iunlock(dp);
+  return perm;
 }
 
 // Fetch the nth word-sized system call argument as a file descriptor
@@ -79,11 +83,11 @@ sys_dup(void)
     return -1;
   if((fd=fdalloc(f)) < 0)
     return -1;
-  if(!checkperms(f->ip, READ)) {
-    myproc()->ofile[fd] = 0;
-    fileclose(f);
-    return -1;
-  }
+  // if(!checkperms(f->ip, READ)) {
+  //   myproc()->ofile[fd] = 0;
+  //   fileclose(f);
+  //   return -1;
+  // }
   filedup(f);
   return fd;
 }
@@ -101,10 +105,10 @@ sys_read(void)
   if(argfd(0, 0, &f) < 0)
     return -1;
     
-  if(!checkperms(f->ip, READ)) {
-    fileclose(f);
-    return -1;
-  }
+  // if(!checkperms(f->ip, READ)) {
+  //   fileclose(f);
+  //   return -1;
+  // }
 
   return fileread(f, p, n);
 }
@@ -121,10 +125,10 @@ sys_write(void)
   if(argfd(0, 0, &f) < 0)
     return -1;
 
-  if(!checkperms(f->ip, WRITE)) {
-    fileclose(f);
-    return -1;
-  }
+  // if(!checkperms(f->ip, WRITE)) {
+  //   fileclose(f);
+  //   return -1;
+  // }
 
   return filewrite(f, p, n);
 }
@@ -181,7 +185,7 @@ sys_link(void)
   iupdate(ip);
   iunlock(ip);
 
-  if((dp = nameiparent(new, name)) == 0 || !checkperms(dp, OWNER_PERM(dp)))
+  if((dp = nameiparent(new, name)) == 0)
     goto bad;
   ilock(dp);
   if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0){
@@ -247,8 +251,8 @@ sys_unlink(void)
     goto bad;
   ilock(ip);
 
-  if(!checkperms(dp, OWNER_PERM(dp)))
-    goto bad;
+  // if(!checkperms(dp, OWNER_PERM(dp)))
+  //   goto bad;
 
   if(ip->nlink < 1)
     panic("unlink: nlink < 1");
@@ -289,8 +293,8 @@ create(char *path, short type, short major, short minor)
   if((dp = nameiparent(path, name)) == 0)
     return 0;
 
-  if((ip == namei(path)) && !checkperms(ip, WRITE))
-    return 0;
+  // if((ip == namei(path)) && !checkperms(ip, WRITE))
+  //   return 0;
 
   ilock(dp);
 
@@ -299,8 +303,8 @@ create(char *path, short type, short major, short minor)
     ilock(ip);
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE)) {
       ip->owner = myproc()->uid;
-      ip->permissions = ((READ | WRITE) << 3);
-      iupdate(ip);
+      ip->permissions = ((READ | WRITE) << 3) | READ;
+      //iupdate(ip);
       return ip;
     }
     iunlockput(ip);
@@ -317,7 +321,7 @@ create(char *path, short type, short major, short minor)
   ip->minor = minor;
   ip->nlink = 1;
   ip->owner = myproc()->uid;
-  ip->permissions = ((READ | WRITE) << 3);
+  ip->permissions = ((READ | WRITE) << 3) | READ;
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -363,6 +367,15 @@ sys_open(void)
   if((n = argstr(0, path, MAXPATH)) < 0)
     return -1;
 
+  if(omode & O_RDONLY || omode & O_RDWR) {
+    if(!checkperms(path, READ))
+      return -1;
+  }
+  if(omode & O_RDWR || omode & O_CREATE || omode & O_TRUNC) {
+    if(!checkperms(path, WRITE))
+      return -1;
+  }
+
   begin_op();
 
   if(omode & O_CREATE){
@@ -372,11 +385,11 @@ sys_open(void)
       return -1;
     }
     if((dp = nameiparent(path, name)) != 0) {
-      if(!checkperms(dp, WRITE)) {
-        iunlockput(ip);
-        end_op();
-        return -1;
-      }
+      // if(!checkperms(dp, WRITE)) {
+      //   iunlockput(ip);
+      //   end_op();
+      //   return -1;
+      // }
     }
   } else {
     if((ip = namei(path)) == 0){
@@ -417,13 +430,13 @@ sys_open(void)
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
-    iunlock(ip);
-    if(!checkperms(ip, WRITE)) {
-      iput(ip);
-      end_op();
-      return -1;
-    }
-    ilock(ip);
+    // iunlock(ip);
+    // if(!checkperms(ip, WRITE)) {
+    //   iput(ip);
+    //   end_op();
+    //   return -1;
+    // }
+    // ilock(ip);
     itrunc(ip);
   }
 
@@ -436,7 +449,7 @@ sys_open(void)
 uint64
 sys_mkdir(void)
 {
-  char path[MAXPATH], name[DIRSIZ];
+  char path[MAXPATH];
   struct inode *ip;
 
   begin_op();
@@ -444,11 +457,11 @@ sys_mkdir(void)
     end_op();
     return -1;
   }
-  if(!checkperms(nameiparent(path, name), WRITE)) {
-    iunlockput(ip);
-    end_op();
-    return -1;
-  }
+  // if(!checkperms(nameiparent(path, name), WRITE)) {
+  //   iunlockput(ip);
+  //   end_op();
+  //   return -1;
+  // }
   iunlockput(ip);
   end_op();
   return 0;
@@ -492,11 +505,11 @@ sys_chdir(void)
     end_op();
     return -1;
   }
-  if(!checkperms(ip, READ)) {
-    iunlockput(ip);
-    end_op();
-    return -1;
-  }
+  // if(!checkperms(ip, READ)) {
+  //   iunlockput(ip);
+  //   end_op();
+  //   return -1;
+  // }
   iunlock(ip);
   iput(p->cwd);
   end_op();
@@ -517,7 +530,7 @@ sys_exec(void)
     return -1;
   }
   if((dp = nameiparent(path, name)) != 0) {
-    if(!checkperms(nameiparent(path, name), EXEC))
+    if(!checkperms(name, EXEC))
       return -1;
   }
   memset(argv, 0, sizeof(argv));
@@ -571,13 +584,13 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
-  if(!checkperms(rf->ip, READ) || !checkperms(wf->ip, WRITE)) {
-    p->ofile[fd0] = 0;
-    p->ofile[fd1] = 0;
-    fileclose(rf);
-    fileclose(wf);
-    return -1;
-  }
+  // if(!checkperms(rf->ip, READ) || !checkperms(wf->ip, WRITE)) {
+  //   p->ofile[fd0] = 0;
+  //   p->ofile[fd1] = 0;
+  //   fileclose(rf);
+  //   fileclose(wf);
+  //   return -1;
+  // }
   if(copyout(p->pagetable, fdarray, (char*)&fd0, sizeof(fd0)) < 0 ||
      copyout(p->pagetable, fdarray+sizeof(fd0), (char *)&fd1, sizeof(fd1)) < 0){
     p->ofile[fd0] = 0;
