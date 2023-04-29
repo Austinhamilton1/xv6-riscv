@@ -238,7 +238,7 @@ struct userlist *deserialize_users(char *str) {
 void logusers(struct userlist *users) {
     int fd;
     if((fd = open("/users", O_CREATE | O_WRONLY)) < 0) {
-        printf("Couldn't create user file.\n");
+        printf("Couldn't open user file.\n");
         exit(1);
     }
     if(write(fd, serialize_users(users), MAXUSERSSTR) < 0) {
